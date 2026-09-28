@@ -1,0 +1,4 @@
+*.md
+*.swp
+*.tmp
+/doc/tags

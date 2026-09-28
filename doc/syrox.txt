@@ -1,0 +1,91 @@
+*syrox.txt*  Syrox (.srx) support for Neovim 0.11+
+
+SETUP                                                        *syrox-setup*
+
+Build the server from the Syrox repository:
+>
+  cargo build --locked --release -p syrox --bin srx
+<
+Add the runtime directory to runtimepath before calling setup in init.lua:
+>
+  local syrox = vim.fn.expand("~/Work/Ryro/syrox")
+  vim.opt.runtimepath:prepend(vim.fn.expand("~/Work/Ryro/syrox.nvim"))
+  require("syrox").setup({
+    cmd = { syrox .. "/target/release/srx", "lsp" },
+    standard_library_root = syrox .. "/std",
+  })
+<
+The .srx extension is detected as filetype=syrox. Syntax highlighting uses the
+current colorscheme's standard highlight groups. No Tree-sitter parser, Mason,
+nvim-lspconfig or completion plugin is required. The root is found through
+Syrox.lock, main.srx or .git. The standard library is bundled in the server.
+
+For lazy.nvim, install from the standalone repository:
+>
+  {
+    "ryro-hq/syrox.nvim",
+    lazy = false,
+    opts = { cmd = { "srx", "lsp" } },
+    config = function(_, opts) require("syrox").setup(opts) end,
+  }
+<
+If using nvim-cmp or blink.cmp, set completion=false and configure your existing
+completion plugin normally. Extra LSP settings/capabilities can be passed in
+lsp={...}; its on_attach callback runs after this integration's setup. Disable
+the default buffer mappings with keymaps=false, or diagnostic display settings
+with diagnostics=false. Setup does not install a colorscheme.
+Set inlay_hints=false to disable automatic type hint display. Hints and semantic
+colors are enabled when advertised by the installed server. Configure hint
+categories using lsp.init_options.inlayHints={types=true,parameters=true,ownership=false}.
+
+KEYS                                                         *syrox-keys*
+
+  gd              Go to definition, including virtual std sources
+  K               Hover / type
+  <leader>ca      Quick fixes (normal/visual mode)
+  CTRL-K          Signature help (normal/insert mode)
+  CTRL-Space      Request completion (insert mode)
+  CTRL-X CTRL-O   Omnicompletion (insert mode)
+  <leader>ds      Document symbols
+  <leader>e       Diagnostic details
+  [d / ]d         Previous / next diagnostic
+
+Builtin completion triggers automatically on the server's advertised characters.
+Use CTRL-Space or CTRL-X CTRL-O elsewhere, CTRL-N/CTRL-P to select an entry and
+CTRL-Y to accept it. <leader> defaults to backslash unless your config changes it.
+
+Virtual std buffers are read-only. Their URIs expire on a new analysis generation;
+if navigation reports an expired source, repeat gd from the project buffer.
+The provider serves text already held by the running server. Quick fixes contain
+versioned edits and are applied by Neovim, then saved with :write as usual.
+
+TROUBLESHOOTING                                               *syrox-check*
+
+  :set filetype?       Should show syrox
+  :set syntax?         Should show syrox
+  :checkhealth vim.lsp Check the server command/root/attachment
+  :messages           Startup errors and expired virtual-source messages
+
+The available features depend on the installed srx lsp version. Lexical colors
+do not require successful project loading; semantic colors and type/parameter
+hints use checked information when supported. Project diagnostics use main.srx and the disk input
+graph; save changes to input locators to reload that graph.
+
+When editing the standard library itself, set standard_library_root to its
+source directory. This sends initializationOptions.workspaceMode="standard-library"
+only for that root. The server analyzes all .srx files recursively as one std
+namespace, so imports in std/main.srx resolve to the sibling source files.
+Definitions jump to physical, editable files in this mode. Ordinary projects
+continue to use their configured bundled std. This authoring mode is editor-only;
+it does not authenticate these disk sources for package execution or update Locks.
+
+TESTING                                                      *syrox-test*
+>
+  SRX_BIN=/absolute/path/to/srx nvim --headless -u NONE -l tests/smoke.lua
+  SRX_BIN=/absolute/path/to/srx SRX_STD_DIR=/path/to/syrox/std nvim --headless -u NONE -l tests/std.lua
+<
+Run from this plugin's root with a server supporting srx lsp. SRX_BIN defaults to
+srx on PATH. SRX_STD_DIR is required for the std authoring test. These tests use
+an external server; no Syrox source checkout is required for the ordinary smoke.
+
+vim:tw=78:ts=8:ft=help:norl:
