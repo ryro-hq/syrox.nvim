@@ -21,7 +21,6 @@ local function virtual_source(event)
     end
     last_error = response and response.err and response.err.message or err or last_error
   end
-  -- URIs are revision-scoped: ask for a new definition from the source buffer.
   error("Syrox virtual source unavailable; repeat Go to Definition from the source buffer. " .. tostring(last_error))
 end
 
