@@ -55,6 +55,37 @@ local function run()
     if item.label == "map_from_entries" then entry = item end
   end
   assert(entry and entry.kind == 3, "map_from_entries must complete as Function immediately after editing")
+  vim.cmd("edit!")
+  for _, case in ipairs({
+    { path = "/catalog.srx", before = "PackageSet<R> { factories = factories; }", after = "PackageSet<R> { fac }", prefix = "{ fac", label = "factories", detail = "std::maps::OrderedMap<std::recipe::RecipeRef<R>> (required)" },
+    { path = "/collections/map.srx", before = "OrderedMap<T> { entries = []; }", after = "OrderedMap<T> { ent }", prefix = "{ ent", label = "entries", detail = "[std::maps::MapEntry<T>] (required)" },
+  }) do
+    vim.cmd.edit(vim.fn.fnameescape(root .. case.path))
+    local target = vim.api.nvim_get_current_buf()
+    local original = vim.api.nvim_buf_get_lines(target, 0, -1, false)
+    local field_row, field_line
+    for index, candidate in ipairs(original) do
+      local begin_at, end_at = candidate:find(case.before, 1, true)
+      if begin_at then
+        field_row = index - 1
+        field_line = candidate:sub(1, begin_at - 1) .. case.after .. candidate:sub(end_at + 1)
+        break
+      end
+    end
+    assert(field_row, "std literal fixture: " .. case.label)
+    vim.api.nvim_buf_set_lines(target, field_row, field_row + 1, false, { field_line })
+    local column = assert(field_line:find(case.prefix, 1, true)) - 1 + #case.prefix
+    local fields = client:request_sync("textDocument/completion", {
+      textDocument = { uri = vim.uri_from_bufnr(target) }, position = { line = field_row, character = column },
+    }, 5000, target)
+    local found
+    for _, item in ipairs(fields and fields.result and fields.result.items or {}) do
+      if item.label == case.label then found = item end
+    end
+    assert(found and found.kind == 5 and found.detail == case.detail, vim.inspect(fields))
+    vim.api.nvim_buf_set_lines(target, 0, -1, false, original)
+    vim.bo[target].modified = false
+  end
   print("Syrox std authoring: imports, physical definitions, siblings and typed completion passed")
 end
 local ok, err = xpcall(run, debug.traceback)
