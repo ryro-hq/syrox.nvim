@@ -1,22 +1,22 @@
 name: Check
 on:
   push:
+    branches: [main]
   pull_request:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
   runtime:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: rhysd/action-setup-vim@v1
         with:
           neovim: true
           version: v0.11.5
       - name: Load runtime and check Lua syntax
-        run: >-
-          nvim --headless -u NONE
-          '+set rtp+=.'
-          '+lua for _, file in ipairs(vim.fn.glob("**/*.lua", false, true)) do assert(loadfile(file)) end'
-          '+lua require("syrox").setup()'
-          '+qa!'
+        run: nvim --headless -u NONE -l tests/check.lua

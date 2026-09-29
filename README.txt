@@ -22,6 +22,7 @@ For blink.cmp set completion=false and supply its capabilities in lsp.capabiliti
 Set keymaps=false to keep your own buffer mappings. See :help syrox-setup.
 
 Tests from this repository:
+  nvim --headless -u NONE -l tests/check.lua
   SRX_BIN=/path/to/srx nvim --headless -u NONE -l tests/smoke.lua
   SRX_BIN=/path/to/srx SRX_STD_DIR=/path/to/syrox/std nvim --headless -u NONE -l tests/std.lua
 
