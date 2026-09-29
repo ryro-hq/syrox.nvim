@@ -11,7 +11,7 @@ permissions:
 jobs:
   runtime:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
       - uses: rhysd/action-setup-vim@v1
@@ -20,3 +20,18 @@ jobs:
           version: v0.11.5
       - name: Load runtime and check Lua syntax
         run: nvim --headless -u NONE -l tests/check.lua
+      - uses: actions/checkout@v7
+        with:
+          repository: ryro-hq/syrox
+          ref: 3f58af4cffe6eeef5cf6a78705f15bdc17ff9474
+          path: syrox-server
+      - name: Build pinned language server
+        working-directory: syrox-server
+        run: cargo build --locked -p syrox --bin srx
+      - name: Exercise Neovim with real server
+        env:
+          SRX_BIN: ${{ github.workspace }}/syrox-server/target/debug/srx
+          SRX_STD_DIR: ${{ github.workspace }}/syrox-server/std
+        run: |
+          nvim --headless -u NONE -l tests/smoke.lua
+          nvim --headless -u NONE -l tests/std.lua
